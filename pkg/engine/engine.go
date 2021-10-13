@@ -8,11 +8,14 @@ import (
 	"github.com/robfig/cron"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	logging "github.com/ipfs/go-log"
 	pinning "github.com/ipfs/go-pinning-service-http-client"
 
 	"github.com/coryschwartz/gateway-monitor/pkg/queue"
 	"github.com/coryschwartz/gateway-monitor/pkg/task"
 )
+
+var log = logging.Logger("engine")
 
 type Engine struct {
 	c    *cron.Cron
@@ -37,6 +40,7 @@ func New(sh *shell.Shell, ps *pinning.Client, gw string, tsks ...task.Task) *Eng
 	for _, t := range tsks {
 		reg := t.Registration()
 		eng.c.AddFunc(reg.Schedule, func() {
+			log.Info("queueing scheduled task")
 			eng.q.Push(t)
 		})
 		for _, col := range reg.Collectors {
@@ -92,5 +96,6 @@ func (e *Engine) Start(ctx context.Context) chan error {
 }
 
 func (e *Engine) Stop() {
+	log.Info("graceful shutdown")
 	e.done <- true
 }
