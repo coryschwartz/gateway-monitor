@@ -4,6 +4,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	pinning "github.com/ipfs/go-pinning-service-http-client"
 )
 
 var All = []*cli.Command{
@@ -20,9 +21,6 @@ func GetIPFS(cctx *cli.Context) *shell.Shell {
 		sh = shell.NewLocalShell()
 	}
 
-	// TODO not implemented
-	if cctx.IsSet("pinning-service") {
-	}
 	return sh
 }
 
@@ -32,4 +30,13 @@ func GetGW(cctx *cli.Context) string {
 		return args.First()
 	}
 	return "https://ipfs.io"
+}
+
+func GetPinningService(cctx *cli.Context) *pinning.Client {
+	if cctx.IsSet("pinning-service") && cctx.IsSet("pinning-token") {
+		url := cctx.String("pinning-service")
+		tok := cctx.String("pinning-token")
+		return pinning.NewClient(url, tok)
+	}
+	return nil
 }

@@ -11,9 +11,10 @@ var singleCommand = &cli.Command{
 	Name:  "single",
 	Usage: "run a single test",
 	Action: func(cctx *cli.Context) error {
-		sh := GetIPFS(cctx)
+		ipfs := GetIPFS(cctx)
+		ps := GetPinningService(cctx)
 		gw := GetGW(cctx)
-		eng := engine.NewSingle(sh, gw, tasks.All...)
+		eng := engine.NewSingle(ipfs, ps, gw, tasks.All...)
 		return <-eng.Start(cctx.Context)
 	},
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/robfig/cron"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	pinning "github.com/ipfs/go-pinning-service-http-client"
 
 	"github.com/coryschwartz/gateway-monitor/pkg/queue"
 	"github.com/coryschwartz/gateway-monitor/pkg/task"
@@ -17,16 +18,18 @@ type Engine struct {
 	c    *cron.Cron
 	q    *queue.TaskQueue
 	sh   *shell.Shell
+	ps   *pinning.Client
 	gw   string
 	done chan bool
 }
 
 // Create an engine with Cron and Prometheus setup
-func New(sh *shell.Shell, gw string, tsks ...task.Task) *Engine {
+func New(sh *shell.Shell, ps *pinning.Client, gw string, tsks ...task.Task) *Engine {
 	eng := Engine{
 		c:    cron.New(),
 		q:    &queue.TaskQueue{},
 		sh:   sh,
+		ps:   ps,
 		gw:   gw,
 		done: make(chan bool),
 	}
@@ -45,11 +48,12 @@ func New(sh *shell.Shell, gw string, tsks ...task.Task) *Engine {
 }
 
 // Create an engine without Cron and prometheus.
-func NewSingle(sh *shell.Shell, gw string, tsks ...task.Task) *Engine {
+func NewSingle(sh *shell.Shell, ps *pinning.Client, gw string, tsks ...task.Task) *Engine {
 	eng := Engine{
 		c:    cron.New(),
 		q:    &queue.TaskQueue{},
 		sh:   sh,
+		ps:   ps,
 		gw:   gw,
 		done: make(chan bool, 1),
 	}
@@ -75,7 +79,7 @@ func (e *Engine) Start(ctx context.Context) chan error {
 			case t := <-tch:
 				c, cancel := context.WithTimeout(ctx, 10*time.Minute)
 				defer cancel()
-				if err := t.Run(c, e.sh, e.gw); err != nil {
+				if err := t.Run(c, e.sh, e.ps, e.gw); err != nil {
 					errCh <- err
 				}
 			case <-e.done:

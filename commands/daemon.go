@@ -19,8 +19,9 @@ var daemonCommand = &cli.Command{
 			http.ListenAndServe(":2112", nil)
 		}()
 		ipfs := GetIPFS(cctx)
+		ps := GetPinningService(cctx)
 		gw := GetGW(cctx)
-		eng := engine.New(ipfs, gw, tasks.All...)
+		eng := engine.New(ipfs, ps, gw, tasks.All...)
 		return <-eng.Start(cctx.Context)
 	},
 }

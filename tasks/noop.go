@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	pinning "github.com/ipfs/go-pinning-service-http-client"
 
 	"github.com/coryschwartz/gateway-monitor/pkg/task"
 )
@@ -17,7 +18,7 @@ type NoopTask struct {
 	g prometheus.Gauge
 }
 
-func (t *NoopTask) Run(ctx context.Context, sh *shell.Shell, gw string) error {
+func (t *NoopTask) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Client, gw string) error {
 	for i := 0; i < t.i; i++ {
 		time.Sleep(time.Second)
 		fmt.Println("test")
