@@ -19,5 +19,6 @@ const (
 var All = []task.Task{
 	NewRandomLocalBench("0 * * * *", 16*miB),
 	NewRandomLocalBench("0 * * * *", 256*miB),
-	NewRandomLocalBench("0 * * * *", giB),
+	NewIpnsBench("0 * * * *", 16*miB),
+	NewIpnsBench("0 * * * *", 256*miB),
 }
