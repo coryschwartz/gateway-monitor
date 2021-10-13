@@ -27,7 +27,7 @@ type Engine struct {
 func New(sh *shell.Shell, ps *pinning.Client, gw string, tsks ...task.Task) *Engine {
 	eng := Engine{
 		c:    cron.New(),
-		q:    &queue.TaskQueue{},
+		q:    queue.NewTaskQueue(),
 		sh:   sh,
 		ps:   ps,
 		gw:   gw,
@@ -51,7 +51,7 @@ func New(sh *shell.Shell, ps *pinning.Client, gw string, tsks ...task.Task) *Eng
 func NewSingle(sh *shell.Shell, ps *pinning.Client, gw string, tsks ...task.Task) *Engine {
 	eng := Engine{
 		c:    cron.New(),
-		q:    &queue.TaskQueue{},
+		q:    queue.NewTaskQueue(),
 		sh:   sh,
 		ps:   ps,
 		gw:   gw,

@@ -14,8 +14,9 @@ import (
 )
 
 type NoopTask struct {
-	i int
-	g prometheus.Gauge
+	schedule string
+	i        int
+	g        prometheus.Gauge
 }
 
 func (t *NoopTask) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Client, gw string) error {
@@ -30,13 +31,14 @@ func (t *NoopTask) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Client,
 func (t *NoopTask) Registration() *task.Registration {
 	return &task.Registration{
 		Collectors: []prometheus.Collector{t.g},
-		Schedule:   "0 * * * *",
+		Schedule:   t.schedule,
 	}
 }
 
-func NewNoopTask(i int) *NoopTask {
+func NewNoopTask(schedule string, i int) *NoopTask {
 	return &NoopTask{
-		i: i,
+		schedule: schedule,
+		i:        i,
 		g: prometheus.NewGauge(
 			prometheus.GaugeOpts{
 				Namespace: "gatewaymonitor",

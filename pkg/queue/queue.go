@@ -8,20 +8,35 @@ import (
 )
 
 type TaskQueue struct {
-	mu    sync.Mutex
-	tasks []task.Task
+	mu      sync.Mutex
+	tasks   []task.Task
+	taskmap map[task.Task]bool
+}
+
+func NewTaskQueue() *TaskQueue {
+	return &TaskQueue{
+		tasks:   []task.Task{},
+		taskmap: make(map[task.Task]bool),
+	}
 }
 
 func (q *TaskQueue) Len() int {
 	return len(q.tasks)
 }
 
-// TODO: Skop adding tasks that are already queued
-// and maybe add a monitor for queue length, or queue fails
-func (q *TaskQueue) Push(t ...task.Task) {
+// TODO:
+// add a monitor for queue length, or queue fails
+func (q *TaskQueue) Push(tsks ...task.Task) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.tasks = append(q.tasks, t...)
+
+	for _, newtsk := range tsks {
+		if _, found := q.taskmap[newtsk]; found {
+			continue
+		}
+		q.tasks = append(q.tasks, newtsk)
+		q.taskmap[newtsk] = true
+	}
 }
 
 func (q *TaskQueue) Pop() (task.Task, bool) {
@@ -33,6 +48,7 @@ func (q *TaskQueue) Pop() (task.Task, bool) {
 	}
 	t := q.tasks[0]
 	q.tasks = q.tasks[1:]
+	delete(q.taskmap, t)
 	return t, true
 }
 
