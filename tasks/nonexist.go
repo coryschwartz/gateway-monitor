@@ -30,25 +30,25 @@ type NonExistCheck struct {
 func NewNonExistCheck(schedule string) *NonExistCheck {
 	start_time := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "nonexsist",
 			Name:      "latency",
 		})
 	fetch_time := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "non_exist",
 			Name:      "fetch_time",
 		})
 	fails := prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "non_exist",
 			Name:      "fail_count",
 		})
 	errors := prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "non_exist",
 			Name:      "error_count",
 		})

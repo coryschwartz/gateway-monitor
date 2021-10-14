@@ -41,7 +41,7 @@ func NewNoopTask(schedule string, i int) *NoopTask {
 		i:        i,
 		g: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Namespace: "gatewaymonitor",
+				Namespace: "gatewaymonitor_task",
 				Subsystem: "noop",
 				Name:      "noopgauge",
 			},

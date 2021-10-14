@@ -31,25 +31,25 @@ type RandomLocalBench struct {
 func NewRandomLocalBench(schedule string, size int) *RandomLocalBench {
 	start_time := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "random_local",
 			Name:      fmt.Sprintf("%d_latency", size),
 		})
 	fetch_time := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "random_local",
 			Name:      fmt.Sprintf("%d_fetch_time", size),
 		})
 	fails := prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "random_local",
 			Name:      "fail_count",
 		})
 	errors := prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "random_local",
 			Name:      "error_count",
 		})
@@ -104,11 +104,14 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 	log.Infow("fetching from gateway", "url", url)
 	req, _ := http.NewRequest("GET", url, nil)
 	start := time.Now()
+	var firstbyte_time time.Time
 	trace := &httptrace.ClientTrace{
 		GotFirstResponseByte: func() {
 			latency := time.Since(start).Milliseconds()
 			log.Infow("first byte received", "ms", latency)
 			t.start_time.Observe(float64(latency))
+			common_fetch_latency.Set(float64(latency))
+			firstbyte_time = time.Now()
 		},
 	}
 	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
@@ -123,8 +126,11 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 		return fmt.Errorf("failed to download content: %w", err)
 	}
 	total_time := time.Since(start).Milliseconds()
+	download_time := time.Since(firstbyte_time).Seconds()
 	log.Infow("finished download", "ms", total_time)
 	t.fetch_time.Observe(float64(total_time))
+	downloadBytesPerSecond := float64(t.size) / download_time
+	common_fetch_speed.Set(downloadBytesPerSecond)
 
 	log.Info("checking result")
 	// compare response with what we sent

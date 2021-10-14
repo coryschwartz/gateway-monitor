@@ -29,25 +29,25 @@ type KnownGoodCheck struct {
 func NewKnownGoodCheck(schedule string, checks map[string][]byte) *KnownGoodCheck {
 	start_time := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "known_good",
 			Name:      "latency",
 		})
 	fetch_time := prometheus.NewHistogram(
 		prometheus.HistogramOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "known_good",
 			Name:      "fetch_time",
 		})
 	fails := prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "known_good",
 			Name:      "fail_count",
 		})
 	errors := prometheus.NewCounter(
 		prometheus.CounterOpts{
-			Namespace: "gatewaymonitor",
+			Namespace: "gatewaymonitor_task",
 			Subsystem: "known_good",
 			Name:      "error_count",
 		})
