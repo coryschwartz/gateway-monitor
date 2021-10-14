@@ -77,6 +77,8 @@ func NewIpnsBench(schedule string, size int) *IpnsBench {
 		publish_time: publish_time,
 		start_time:   start_time,
 		fetch_time:   fetch_time,
+		fails:        fails,
+		errors:       errors,
 	}
 }
 
