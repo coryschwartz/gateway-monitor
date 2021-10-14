@@ -39,10 +39,7 @@ func New(sh *shell.Shell, ps *pinning.Client, gw string, tsks ...task.Task) *Eng
 
 	for _, t := range tsks {
 		reg := t.Registration()
-		eng.c.AddFunc(reg.Schedule, func() {
-			log.Info("queueing scheduled task")
-			eng.q.Push(t)
-		})
+		eng.c.AddFunc(reg.Schedule, scheduleClosure(eng.q, t))
 		for _, col := range reg.Collectors {
 			prometheus.Register(col)
 		}
@@ -98,4 +95,11 @@ func (e *Engine) Start(ctx context.Context) chan error {
 func (e *Engine) Stop() {
 	log.Info("graceful shutdown")
 	e.done <- true
+}
+
+func scheduleClosure(q *queue.TaskQueue, t task.Task) func() {
+	return func() {
+		log.Info("queueing scheduled task")
+		q.Push(t)
+	}
 }
