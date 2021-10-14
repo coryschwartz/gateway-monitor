@@ -6,13 +6,10 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 
-	logging "github.com/ipfs/go-log"
-
 	"github.com/coryschwartz/gateway-monitor/pkg/task"
 )
 
 var (
-	log       = logging.Logger("queue")
 	queue_len = prometheus.NewGauge(
 		prometheus.GaugeOpts{
 			Namespace: "gatewaymonitor",
@@ -55,11 +52,9 @@ func (q *TaskQueue) Push(tsks ...task.Task) {
 
 	for _, newtsk := range tsks {
 		if _, found := q.taskmap[newtsk]; found {
-			log.Infow("not adding task to queue because it already is. Backed up?", "length", q.Len())
 			queue_fails.Inc()
 			continue
 		}
-		log.Infow("adding task to queue", "length", q.Len())
 		q.tasks = append(q.tasks, newtsk)
 		q.taskmap[newtsk] = true
 		queue_len.Inc()

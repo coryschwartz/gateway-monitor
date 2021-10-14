@@ -1,7 +1,11 @@
 package commands
 
 import (
+	"os"
+
 	"github.com/urfave/cli/v2"
+
+	logging "github.com/ipfs/go-log"
 
 	"github.com/coryschwartz/gateway-monitor/pkg/engine"
 	"github.com/coryschwartz/gateway-monitor/tasks"
@@ -9,8 +13,13 @@ import (
 
 var singleCommand = &cli.Command{
 	Name:  "single",
-	Usage: "run a single test",
+	Usage: "run tests once, ignoring the schedule",
 	Action: func(cctx *cli.Context) error {
+		// If we arent explicitly setting the log level,
+		// lets set it so most messages can be seen
+		if _, found := os.LookupEnv("GOLOG_LOG_LEVEL"); !found {
+			logging.SetAllLoggers(logging.LevelInfo)
+		}
 		ipfs := GetIPFS(cctx)
 		ps := GetPinningService(cctx)
 		gw := GetGW(cctx)
