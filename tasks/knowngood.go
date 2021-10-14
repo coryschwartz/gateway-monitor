@@ -88,15 +88,13 @@ func (t *KnownGoodCheck) Run(ctx context.Context, sh *shell.Shell, ps *pinning.C
 		req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			log.Errorw("failed to fetch from gateway", "err", err)
 			t.errors.Inc()
-			return err
+			return fmt.Errorf("failed to fetch from gateway: %w", err)
 		}
 		respb, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			log.Errorw("failed to download content", "err", err)
 			t.errors.Inc()
-			return err
+			return fmt.Errorf("failed to download content: %w", err)
 		}
 		total_time := time.Since(start).Milliseconds()
 		log.Infow("finished download", "ms", total_time)
@@ -106,9 +104,8 @@ func (t *KnownGoodCheck) Run(ctx context.Context, sh *shell.Shell, ps *pinning.C
 		log.Info("checking result")
 		// compare response with what we sent
 		if !reflect.DeepEqual(respb, value) {
-			log.Warnw("response from gateway did not match", "url", url, "found", respb, "expected", value)
 			t.fails.Inc()
-			return fmt.Errorf("expected response from gateway to match generated cid")
+			return fmt.Errorf("expected response from gateway to match generated content: %s", url)
 		}
 	}
 

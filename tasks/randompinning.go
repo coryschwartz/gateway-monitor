@@ -78,9 +78,8 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	log.Infof("generating %d bytes random data", t.size)
 	randb := make([]byte, t.size)
 	if _, err := rand.Read(randb); err != nil {
-		log.Errorw("failed to generate random values", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to generate random values: %w", err)
 	}
 	buf := bytes.NewReader(randb)
 
@@ -88,9 +87,8 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	log.Info("writing data to local IPFS node")
 	cidstr, err := sh.Add(buf)
 	if err != nil {
-		log.Errorw("failed to write to IPFS", "err", err)
 		t.errors.Inc()
-		return err
+		log.Errorw("failed to write to IPFS: %w", err)
 	}
 	defer func() {
 		log.Info("cleaning up IPFS node")
@@ -101,15 +99,13 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	// Pin to pinning service
 	c, err := cid.Decode(cidstr)
 	if err != nil {
-		log.Errorw("failed to decode cid after it was returned from IPFS", "cid", cidstr, "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to decode cid after it was returned from IPFS: %w", err)
 	}
 	getter, err := ps.Add(ctx, c)
 	if err != nil {
-		log.Errorw("failed to pin cid to pinning service", "cid", cidstr, "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to pin cid to pinning service: %w", err)
 	}
 
 	// long poll pinning service
@@ -130,9 +126,8 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	log.Info("removing pin from local IPFS node")
 	err = sh.Unpin(cidstr)
 	if err != nil {
-		log.Errorw("could not unpin cid after adding it earlier")
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("could not unpin cid after adding it earlier: %w", err)
 	}
 
 	// request from gateway, observing client metrics
@@ -150,15 +145,13 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Errorw("failed to fetch from gateway", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to fetch from gateway: %w", err)
 	}
 	respb, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorw("failed to downlaod content", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to downlaod content: %w", err)
 	}
 	total_time := time.Since(start).Milliseconds()
 	log.Infow("finished download", "ms", total_time)
@@ -167,9 +160,8 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	log.Info("checking result")
 	// compare response with what we sent
 	if !reflect.DeepEqual(respb, randb) {
-		log.Warnw("response from gateway did not match", "url", url)
 		t.fails.Inc()
-		return fmt.Errorf("expected response from gateway to match generated cid")
+		return fmt.Errorf("expected response from gateway to match generated content: %s", url)
 	}
 
 	return nil

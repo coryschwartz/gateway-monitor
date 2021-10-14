@@ -78,9 +78,8 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 	log.Infof("generating %d bytes random data", t.size)
 	randb := make([]byte, t.size)
 	if _, err := rand.Read(randb); err != nil {
-		log.Errorw("failed to generate random values", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to generate random values: %w", err)
 	}
 	buf := bytes.NewReader(randb)
 
@@ -88,9 +87,8 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 	log.Info("writing data to local IPFS node")
 	cidstr, err := sh.Add(buf)
 	if err != nil {
-		log.Errorw("failed to write to IPFS", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to write to IPFS: %w", err)
 	}
 	defer func() {
 		log.Info("cleaning up IPFS node")
@@ -116,15 +114,13 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Errorw("failed to fetch from gateway", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to fetch from gateway %w", err)
 	}
 	respb, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorw("failed to download content", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to download content: %w", err)
 	}
 	total_time := time.Since(start).Milliseconds()
 	log.Infow("finished download", "ms", total_time)
@@ -133,9 +129,8 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 	log.Info("checking result")
 	// compare response with what we sent
 	if !reflect.DeepEqual(respb, randb) {
-		log.Warnw("response from gateway did not match", "url", url)
 		t.fails.Inc()
-		return fmt.Errorf("expected response from gateway to match generated cid")
+		return fmt.Errorf("expected response from gateway to match generated content: %s", url)
 	}
 
 	return nil

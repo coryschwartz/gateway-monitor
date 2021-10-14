@@ -75,21 +75,19 @@ func (t *NonExistCheck) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Cl
 	buf := make([]byte, 128)
 	_, err := rand.Read(buf)
 	if err != nil {
-		log.Error("failed to generate random bytes")
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to generate random bytes: %w", err)
 	}
 
 	encoded, err := multihash.EncodeName(buf, "sha3")
 	if err != nil {
-		log.Error("failed to generate multihash of random bytes")
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to generate multihash of random bytes: %w", err)
 	}
 	cast, err := multihash.Cast(encoded)
 	if err != nil {
-		log.Error("failed to cast as multihash")
-		return err
+		t.errors.Inc()
+		return fmt.Errorf("failed to cast as multihash: %w", err)
 	}
 
 	c := cid.NewCidV1(cid.Raw, cast)
@@ -110,15 +108,13 @@ func (t *NonExistCheck) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Cl
 	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Errorw("failed to fetch from gateway", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to fetch from gateway: %w", err)
 	}
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Errorw("failed to download content", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to download content: %w", err)
 	}
 	total_time := time.Since(start).Milliseconds()
 	log.Infow("finished download", "ms", total_time)
@@ -126,9 +122,8 @@ func (t *NonExistCheck) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Cl
 
 	log.Info("checking that we got a 404")
 	if resp.StatusCode != 404 {
-		log.Warnw("expected to see 404 from gateway, but didn't.", "status", resp.StatusCode)
 		t.fails.Inc()
-		return fmt.Errorf("expected 404")
+		return fmt.Errorf("expected to see 404 from gateway, but didn't. status: (%d): %w", resp.StatusCode, err)
 	}
 
 	return nil

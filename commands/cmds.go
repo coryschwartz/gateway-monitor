@@ -4,13 +4,17 @@ import (
 	"github.com/urfave/cli/v2"
 
 	shell "github.com/ipfs/go-ipfs-api"
+	logging "github.com/ipfs/go-log"
 	pinning "github.com/ipfs/go-pinning-service-http-client"
 )
 
-var All = []*cli.Command{
-	singleCommand,
-	daemonCommand,
-}
+var (
+	log = logging.Logger("gatewaymonitor")
+	All = []*cli.Command{
+		singleCommand,
+		daemonCommand,
+	}
+)
 
 // utility functions
 func GetIPFS(cctx *cli.Context) *shell.Shell {

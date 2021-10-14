@@ -86,9 +86,8 @@ func (t *IpnsBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Client
 	log.Infof("generating %d bytes random data", t.size)
 	randb := make([]byte, t.size)
 	if _, err := rand.Read(randb); err != nil {
-		log.Errorw("failed to generate random values", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to generate random values: %w", err)
 	}
 	buf := bytes.NewReader(randb)
 
@@ -115,9 +114,8 @@ func (t *IpnsBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Client
 	keyName := base64.StdEncoding.EncodeToString(randb[:8])
 	_, err = sh.KeyGen(ctx, keyName)
 	if err != nil {
-		log.Errorw("failed to generate new key", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to generate new key: %w", err)
 	}
 	defer func() {
 		sh.KeyRm(ctx, keyName)
@@ -145,14 +143,13 @@ func (t *IpnsBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Client
 	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Errorw("failed to fetch from gateway", "err", err)
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to fetch from gateway: %w", err)
 	}
 	respb, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.errors.Inc()
-		return err
+		return fmt.Errorf("failed to download content: %w", err)
 	}
 	total_time := time.Since(start).Milliseconds()
 	log.Infow("finished download", "ms", total_time)
@@ -161,9 +158,8 @@ func (t *IpnsBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Client
 	log.Info("checking result")
 	// compare response with what we sent
 	if !reflect.DeepEqual(respb, randb) {
-		log.Warnw("response from gateway did not match", "url", url)
 		t.fails.Inc()
-		return fmt.Errorf("expected response from gateway to match generated cid")
+		return fmt.Errorf("expected response from gateway to match generated content: %w", err)
 	}
 
 	return nil

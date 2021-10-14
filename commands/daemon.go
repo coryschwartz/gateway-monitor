@@ -3,6 +3,7 @@ package commands
 import (
 	"net/http"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli/v2"
 
@@ -10,18 +11,36 @@ import (
 	"github.com/coryschwartz/gateway-monitor/tasks"
 )
 
+var errCounter = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Namespace: "gatewaymonitor",
+		Subsystem: "daemon",
+		Name:      "errors_count",
+	})
+
+func init() {
+	prometheus.Register(errCounter)
+}
+
 var daemonCommand = &cli.Command{
 	Name:  "daemon",
 	Usage: "run commands on schedule",
 	Action: func(cctx *cli.Context) error {
-		go func() {
-			http.Handle("/metrics", promhttp.Handler())
-			http.ListenAndServe(":2112", nil)
-		}()
 		ipfs := GetIPFS(cctx)
 		ps := GetPinningService(cctx)
 		gw := GetGW(cctx)
 		eng := engine.New(ipfs, ps, gw, tasks.All...)
-		return <-eng.Start(cctx.Context)
+		go func() {
+			errCh := eng.Start(cctx.Context)
+			for {
+				select {
+				case err := <-errCh:
+					errCounter.Inc()
+					log.Errorf("%v", err)
+				}
+			}
+		}()
+		http.Handle("/metrics", promhttp.Handler())
+		return http.ListenAndServe(":2112", nil)
 	},
 }
