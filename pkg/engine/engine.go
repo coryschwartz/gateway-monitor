@@ -25,6 +25,11 @@ type Engine struct {
 
 // Create an engine with Cron and Prometheus setup
 func New(sh *shell.Shell, ps *pinning.Client, gw string, tsks ...task.Task) *Engine {
+	q := queue.NewTaskQueue()
+	return NewWithQueue(q, sh, ps, gw, tsks...)
+}
+
+func NewWithQueue(q *queue.TaskQueue, sh *shell.Shell, ps *pinning.Client, gw string, tsks ...task.Task) *Engine {
 	eng := Engine{
 		c:    cron.New(),
 		q:    queue.NewTaskQueue(),
