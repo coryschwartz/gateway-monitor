@@ -23,6 +23,8 @@ type NonExistCheck struct {
 	reg        *task.Registration
 	start_time prometheus.Histogram
 	fetch_time prometheus.Histogram
+	fails      prometheus.Counter
+	errors     prometheus.Counter
 }
 
 func NewNonExistCheck(schedule string) *NonExistCheck {
@@ -38,17 +40,33 @@ func NewNonExistCheck(schedule string) *NonExistCheck {
 			Subsystem: "non_exist",
 			Name:      "fetch_time",
 		})
+	fails := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gatewaymonitor",
+			Subsystem: "non_exist",
+			Name:      "fail_count",
+		})
+	errors := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gatewaymonitor",
+			Subsystem: "non_exist",
+			Name:      "error_count",
+		})
 	reg := task.Registration{
 		Schedule: schedule,
 		Collectors: []prometheus.Collector{
 			start_time,
 			fetch_time,
+			fails,
+			errors,
 		},
 	}
 	return &NonExistCheck{
 		reg:        &reg,
 		start_time: start_time,
 		fetch_time: fetch_time,
+		fails:      fails,
+		errors:     errors,
 	}
 }
 
@@ -58,12 +76,14 @@ func (t *NonExistCheck) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Cl
 	_, err := rand.Read(buf)
 	if err != nil {
 		log.Error("failed to generate random bytes")
+		t.errors.Inc()
 		return err
 	}
 
 	encoded, err := multihash.EncodeName(buf, "sha3")
 	if err != nil {
 		log.Error("failed to generate multihash of random bytes")
+		t.errors.Inc()
 		return err
 	}
 	cast, err := multihash.Cast(encoded)
@@ -91,10 +111,13 @@ func (t *NonExistCheck) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Cl
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Errorw("failed to fetch from gateway", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
+		log.Errorw("failed to download content", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	total_time := time.Since(start).Milliseconds()
@@ -104,6 +127,7 @@ func (t *NonExistCheck) Run(ctx context.Context, sh *shell.Shell, ps *pinning.Cl
 	log.Info("checking that we got a 404")
 	if resp.StatusCode != 404 {
 		log.Warnw("expected to see 404 from gateway, but didn't.", "status", resp.StatusCode)
+		t.fails.Inc()
 		return fmt.Errorf("expected 404")
 	}
 

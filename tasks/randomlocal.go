@@ -24,6 +24,8 @@ type RandomLocalBench struct {
 	size       int
 	start_time prometheus.Histogram
 	fetch_time prometheus.Histogram
+	fails      prometheus.Counter
+	errors     prometheus.Counter
 }
 
 func NewRandomLocalBench(schedule string, size int) *RandomLocalBench {
@@ -39,11 +41,25 @@ func NewRandomLocalBench(schedule string, size int) *RandomLocalBench {
 			Subsystem: "random_local",
 			Name:      fmt.Sprintf("%d_fetch_time", size),
 		})
+	fails := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gatewaymonitor",
+			Subsystem: "random_local",
+			Name:      "fail_count",
+		})
+	errors := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gatewaymonitor",
+			Subsystem: "random_local",
+			Name:      "error_count",
+		})
 	reg := task.Registration{
 		Schedule: schedule,
 		Collectors: []prometheus.Collector{
 			start_time,
 			fetch_time,
+			fails,
+			errors,
 		},
 	}
 	return &RandomLocalBench{
@@ -51,6 +67,8 @@ func NewRandomLocalBench(schedule string, size int) *RandomLocalBench {
 		size:       size,
 		start_time: start_time,
 		fetch_time: fetch_time,
+		fails:      fails,
+		errors:     errors,
 	}
 }
 
@@ -61,6 +79,7 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 	randb := make([]byte, t.size)
 	if _, err := rand.Read(randb); err != nil {
 		log.Errorw("failed to generate random values", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	buf := bytes.NewReader(randb)
@@ -70,6 +89,7 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 	cidstr, err := sh.Add(buf)
 	if err != nil {
 		log.Errorw("failed to write to IPFS", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	defer func() {
@@ -77,6 +97,7 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 		err := sh.Unpin(cidstr)
 		if err != nil {
 			log.Warnw("failed to clean unpin cid.", "cid", cidstr)
+			t.errors.Inc()
 		}
 	}()
 
@@ -96,10 +117,13 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Errorw("failed to fetch from gateway", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	respb, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		log.Errorw("failed to download content", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	total_time := time.Since(start).Milliseconds()
@@ -110,6 +134,7 @@ func (t *RandomLocalBench) Run(ctx context.Context, sh *shell.Shell, ps *pinning
 	// compare response with what we sent
 	if !reflect.DeepEqual(respb, randb) {
 		log.Warnw("response from gateway did not match", "url", url)
+		t.fails.Inc()
 		return fmt.Errorf("expected response from gateway to match generated cid")
 	}
 

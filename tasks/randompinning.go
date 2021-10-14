@@ -25,6 +25,8 @@ type RandomPinningBench struct {
 	size       int
 	start_time prometheus.Histogram
 	fetch_time prometheus.Histogram
+	fails      prometheus.Counter
+	errors     prometheus.Counter
 }
 
 func NewRandomPinningBench(schedule string, size int) *RandomPinningBench {
@@ -40,11 +42,25 @@ func NewRandomPinningBench(schedule string, size int) *RandomPinningBench {
 			Subsystem: "random_pinning",
 			Name:      fmt.Sprintf("%d_fetch_time", size),
 		})
+	fails := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gatewaymonitor",
+			Subsystem: "random_pinning",
+			Name:      "fail_count",
+		})
+	errors := prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Namespace: "gatewaymonitor",
+			Subsystem: "random_pinning",
+			Name:      "error_count",
+		})
 	reg := task.Registration{
 		Schedule: schedule,
 		Collectors: []prometheus.Collector{
 			start_time,
 			fetch_time,
+			fails,
+			errors,
 		},
 	}
 	return &RandomPinningBench{
@@ -52,6 +68,8 @@ func NewRandomPinningBench(schedule string, size int) *RandomPinningBench {
 		size:       size,
 		start_time: start_time,
 		fetch_time: fetch_time,
+		fails:      fails,
+		errors:     errors,
 	}
 }
 
@@ -61,6 +79,7 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	randb := make([]byte, t.size)
 	if _, err := rand.Read(randb); err != nil {
 		log.Errorw("failed to generate random values", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	buf := bytes.NewReader(randb)
@@ -70,6 +89,7 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	cidstr, err := sh.Add(buf)
 	if err != nil {
 		log.Errorw("failed to write to IPFS", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	defer func() {
@@ -82,11 +102,13 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	c, err := cid.Decode(cidstr)
 	if err != nil {
 		log.Errorw("failed to decode cid after it was returned from IPFS", "cid", cidstr, "err", err)
+		t.errors.Inc()
 		return err
 	}
 	getter, err := ps.Add(ctx, c)
 	if err != nil {
 		log.Errorw("failed to pin cid to pinning service", "cid", cidstr, "err", err)
+		t.errors.Inc()
 		return err
 	}
 
@@ -109,6 +131,7 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	err = sh.Unpin(cidstr)
 	if err != nil {
 		log.Errorw("could not unpin cid after adding it earlier")
+		t.errors.Inc()
 		return err
 	}
 
@@ -128,10 +151,13 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Errorw("failed to fetch from gateway", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	respb, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		log.Errorw("failed to downlaod content", "err", err)
+		t.errors.Inc()
 		return err
 	}
 	total_time := time.Since(start).Milliseconds()
@@ -142,6 +168,7 @@ func (t *RandomPinningBench) Run(ctx context.Context, sh *shell.Shell, ps *pinni
 	// compare response with what we sent
 	if !reflect.DeepEqual(respb, randb) {
 		log.Warnw("response from gateway did not match", "url", url)
+		t.fails.Inc()
 		return fmt.Errorf("expected response from gateway to match generated cid")
 	}
 

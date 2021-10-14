@@ -3,9 +3,11 @@ module github.com/coryschwartz/gateway-monitor
 go 1.17
 
 require (
+	github.com/ipfs/go-cid v0.0.7
 	github.com/ipfs/go-ipfs-api v0.2.0
 	github.com/ipfs/go-log v1.0.5
 	github.com/ipfs/go-pinning-service-http-client v0.1.0
+	github.com/multiformats/go-multihash v0.0.14
 	github.com/prometheus/client_golang v1.11.0
 	github.com/robfig/cron v1.2.0
 	github.com/urfave/cli/v2 v2.3.0
@@ -19,7 +21,6 @@ require (
 	github.com/crackcomm/go-gitignore v0.0.0-20170627025303-887ab5e44cc3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.4.3 // indirect
-	github.com/ipfs/go-cid v0.0.7 // indirect
 	github.com/ipfs/go-ipfs-files v0.0.8 // indirect
 	github.com/ipfs/go-log/v2 v2.1.3 // indirect
 	github.com/libp2p/go-buffer-pool v0.0.2 // indirect
@@ -36,7 +37,6 @@ require (
 	github.com/multiformats/go-multiaddr v0.3.1 // indirect
 	github.com/multiformats/go-multiaddr-net v0.2.0 // indirect
 	github.com/multiformats/go-multibase v0.0.3 // indirect
-	github.com/multiformats/go-multihash v0.0.14 // indirect
 	github.com/multiformats/go-varint v0.0.6 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
