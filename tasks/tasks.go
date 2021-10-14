@@ -21,4 +21,8 @@ var All = []task.Task{
 	NewRandomLocalBench("0 * * * *", 256*miB),
 	NewIpnsBench("0 * * * *", 16*miB),
 	NewIpnsBench("0 * * * *", 256*miB),
+	NewKnownGoodCheck("0 * * * *", map[string][]byte{
+		"/ipfs/Qmc5gCcjYypU7y28oCALwfSvxCBskLuPKWpK4qpterKC7z": []byte("Hello World!\r\n"),
+	}),
+	NewNonExistCheck("0 * * * *"),
 }
